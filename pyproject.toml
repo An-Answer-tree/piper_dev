@@ -1,0 +1,22 @@
+[project]
+name = "piper-dev"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Tong Liu", email = "szliutong@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "h5py>=3.14.0",
+    "keyboard>=0.13.5",
+    "numpy>=2.3.3",
+    "termcolor>=3.1.0",
+]
+
+[project.scripts]
+piper-dev = "piper_dev:main"
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.9.0"]
+build-backend = "uv_build"
