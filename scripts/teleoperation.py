@@ -11,8 +11,9 @@ Sampling runs in a background thread at a fixed 0.2 s period using a drift-free
 schedule (next_tick += PERIOD). All trajectories are kept in-memory and saved
 at the end as a PKL file (pickle) with the user-provided file name.
 """
-
+import os
 import pickle
+import sys
 import time
 import threading
 from typing import Dict, List
@@ -23,6 +24,7 @@ from piper_sdk import *
 
 PERIOD = 0.2  # seconds
 DATA_SAVED_PATH = "piper_dev/datasets"
+os.makedirs(DATA_SAVED_PATH, exist_ok=True)
 
 
 def mdeg_to_rad(v_mdeg: float) -> float:
@@ -189,7 +191,8 @@ def main() -> None:
     if not name.lower().endswith(".pkl"):
         name = f"{name}.pkl"
 
-    with open(name, "wb") as f:
+    filepath = os.path.join(DATA_SAVED_PATH, name)
+    with open(filepath, "wb") as f:
         pickle.dump(trajectories, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     print(colored(f"Trajectories saved to: {name}", "cyan"))
