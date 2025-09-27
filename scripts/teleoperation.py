@@ -22,8 +22,9 @@ import numpy as np
 from termcolor import colored
 from piper_sdk import *
 
+# Record Setting
 PERIOD = 0.2  # seconds
-DATA_SAVED_PATH = "piper_dev/datasets"
+DATA_SAVED_PATH = "datasets"
 os.makedirs(DATA_SAVED_PATH, exist_ok=True)
 
 
@@ -183,19 +184,18 @@ def main() -> None:
         print(f"  {k}: {len(v)} states")
 
     # Ask for a user-provided name and save trajectories as a PKL file.
-    name = input(
-        "\nEnter a name for this trajectory set (file will be saved as .pkl): "
-    ).strip()
-    if not name:
-        name = "trajectories"
-    if not name.lower().endswith(".pkl"):
-        name = f"{name}.pkl"
+    if len(trajectories.keys()) != 0:
+        name = input("\nEnter a name for this trajectory set (file will be saved as .pkl): ").strip()
+        if not name:
+            name = "trajectories"
+        if not name.lower().endswith(".pkl"):
+            name = f"{name}.pkl"
 
-    filepath = os.path.join(DATA_SAVED_PATH, name)
-    with open(filepath, "wb") as f:
-        pickle.dump(trajectories, f, protocol=pickle.HIGHEST_PROTOCOL)
+        filepath = os.path.join(DATA_SAVED_PATH, name)
+        with open(filepath, "wb") as f:
+            pickle.dump(trajectories, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    print(colored(f"Trajectories saved to: {name}", "cyan"))
+        print(colored(f"Trajectories saved to: {name}", "cyan"))
 
 
 if __name__ == "__main__":

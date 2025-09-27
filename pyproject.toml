@@ -8,8 +8,6 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "h5py>=3.14.0",
-    "keyboard>=0.13.5",
     "numpy>=2.3.3",
     "termcolor>=3.1.0",
 ]
