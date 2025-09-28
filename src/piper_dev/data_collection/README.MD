@@ -1,7 +1,7 @@
 # 1. Hardware
 Agliex PIPER + Orbbec Gemini335 
-![Agliex PIPER](assets/piper.png)
-![Orbbec Gemini335](assets/gemini335.png)
+![Agliex PIPER](/assets/piper.png)
+![Orbbec Gemini335](/assets/gemini335.png)
 
 --- 
 
@@ -22,7 +22,7 @@ class TeleCFG:
     height = 480
     fps = 30
 ```
-![Camera Setting Sheet](assets/camera_setting.png)
+![Camera Setting Sheet](/assets/camera_setting.png)
 
 --- 
 
