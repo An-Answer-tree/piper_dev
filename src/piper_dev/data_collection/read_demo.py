@@ -5,7 +5,7 @@ import pickle
 import PIL
 from termcolor import colored
 
-file_path = "/home/szliutong/Projects/piper_dev/datasets/put the pan into the box.pkl"
+file_path = "dataset/test.pkl"
 
 with open(file_path, 'rb') as f:
     demos = pickle.load(f)
@@ -15,21 +15,21 @@ print(colored(f"{'*' * 100}", 'yellow'))
 
 print(colored(f"Total structure: ", 'red'))
 print(colored(f"demos has keys: {demos.keys()}", 'cyan'))
-print(colored(f"For each key, Value has keys: {demos["demo_1"].keys()}", 'cyan'))
+print(colored(f"For each key, Value has keys: {demos["demo_0"].keys()}", 'cyan'))
 
 print(colored(f"{'*' * 100}", 'yellow'))
 
 print(colored(f"Data insight: ", 'red'))
 print(colored(f"instruction: {demos["instruction"]}", 'cyan'))
-print(colored(f"state shape: {np.array(demos["demo_1"]["state"]).shape}", 'cyan'))
-print(colored(f"rgb shape: {np.array(demos["demo_1"]["rgb"]).shape}", 'cyan'))
+print(colored(f"state shape: {np.array(demos["demo_0"]["state"]).shape}", 'cyan'))
+print(colored(f"rgb shape: {np.array(demos["demo_0"]["rgb"]).shape}", 'cyan'))
 
 print(colored(f"{'*' * 100}", 'yellow'))
 
-print(colored(f"Task demo_1 as example: ", 'red'))
+print(colored(f"Task demo_0 as example: ", 'red'))
 print(colored(f"instruction: {demos["instruction"]}", 'cyan'))
-print(colored(f"arm_state: {demos["demo_1"]["state"]}", 'cyan'))
-demo_video = demos["demo_1"]["rgb"]
+print(colored(f"arm_state: {demos["demo_0"]["state"]}", 'cyan'))
+demo_video = demos["demo_0"]["rgb"]
 print(colored(f"{'*' * 100}", 'yellow'))
 
 for img in demo_video:

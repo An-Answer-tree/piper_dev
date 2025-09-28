@@ -174,11 +174,11 @@ def current_state(piper: C_PiperInterface_V2) -> np.ndarray:
     return arm_state
 
 
-def connect_camera():
+def connect_camera(width: int = 640, height: int = 480, fps: int = 30):
     config = Config()
     pipeline = Pipeline()
     profile_list = pipeline.get_stream_profile_list(OBSensorType.COLOR_SENSOR)
-    color_profile = profile_list.get_video_stream_profile(640, 0, OBFormat.RGB, 30)
+    color_profile = profile_list.get_video_stream_profile(width, height, OBFormat.RGB, fps)
     config.enable_stream(color_profile)
     
     pipeline.start(config)

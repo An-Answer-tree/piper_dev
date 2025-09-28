@@ -1,15 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Keyboard-driven trajectory recorder (Scheme A: tick broadcast + camera ack).
+"""Keyboard-driven trajectory recorder.
 
 This script records robot arm states and synchronized camera frames using two
 threads coordinated by events:
-
-- Fixed-rate sampling with a drift-free schedule (``next_tick += PERIOD``).
-- ``tick_evt``: the arm thread broadcasts a "tick" so the arm and camera start
-  each shot near-simultaneously.
-- ``cam_done``: the camera thread acknowledges after capturing a frame; the arm
-  waits for this ack to avoid advancing early.
-- No Barrier / tick_id / last_seen / wall/mono timestamps.
 
 Hotkeys:
   - b: Start recording into a new ``demo_*``
@@ -19,8 +12,6 @@ Hotkeys:
 
 Attributes:
   PERIOD (float): Sampling period in seconds.
-  CAM_WAIT_MS (int): Per-call timeout (ms) for ``wait_for_frames``; the camera
-    loop will keep retrying until a valid frame is obtained.
   DATA_SAVED_PATH (str): Directory where the dataset pickle is saved.
 """
 
@@ -45,6 +36,10 @@ config = TeleCFG()
 PERIOD = config.period          # Sampling period (seconds)
 DATA_SAVED_PATH = config.saved_path
 os.makedirs(DATA_SAVED_PATH, exist_ok=True)
+# Camera setting
+WIDTH = config.width
+HEIGHT = config.height
+FPS = config.fps
 
 
 def state_loop_tick_broadcast(
@@ -190,10 +185,11 @@ def main() -> None:
     Returns:
       None
     """
-    # Connect devices.
+    # Connect Robotic Arm
     piper = C_PiperInterface_V2("can0")
     piper.ConnectPort()
-    orbbec = connect_camera()
+    # Connect Camera
+    orbbec = connect_camera(width=WIDTH, height=HEIGHT, fps = FPS)
 
     print(colored("Change Config in 'config.py'", "yellow"))
     print(colored("b=Start Record; n=Save Trajectory; m=Reject Trajectory; q=Quit System", "cyan"))
