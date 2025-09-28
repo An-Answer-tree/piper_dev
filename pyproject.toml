@@ -8,18 +8,19 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "python-can", 
+    "python-can",
     "numpy<2.0",
     "termcolor>=3.1.0",
-    "pybind11==2.11.0", 
-    "pybind11-global==2.11.0", 
-    "opencv-python", 
-    "wheel", 
-    "av", 
-    "pygame", 
-    "pynput", 
-    "piper-sdk @ git+https://github.com/agilexrobotics/piper_sdk.git@master", 
-    "pyorbbecsdk @ file:///home/szliutong/Projects/piper_dev/whl/pyorbbecsdk-2.0.13-cp312-cp312-linux_x86_64.whl", 
+    "pybind11==2.11.0",
+    "pybind11-global==2.11.0",
+    "opencv-python",
+    "wheel",
+    "av",
+    "pygame",
+    "pynput",
+    "piper-sdk @ git+https://github.com/agilexrobotics/piper_sdk.git@master",
+    "pyorbbecsdk @ file:///home/szliutong/Projects/piper_dev/whl/pyorbbecsdk-2.0.13-cp312-cp312-linux_x86_64.whl",
+    "pillow>=11.3.0",
 ]
 
 [project.scripts]

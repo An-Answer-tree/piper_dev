@@ -183,3 +183,12 @@ def connect_camera():
     
     pipeline.start(config)
     return pipeline
+
+
+def bgrs_to_rgbs(bgrs):
+    rgbs = []
+    for i in bgrs:
+        rgb = cv2.cvtColor(i, cv2.COLOR_BGR2RGB)
+        rgbs.append(rgb)
+    return rgbs
+        

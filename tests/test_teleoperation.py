@@ -1,27 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Keyboard-driven trajectory recorder (Scheme A: tick broadcast + camera ack).
+"""Keyboard-driven trajectory recorder (Scheme A: tick broadcast + camera ack)
 
-This script records robot arm states and synchronized camera frames using two
-threads coordinated by events:
-
-- Fixed-rate sampling with a drift-free schedule (``next_tick += PERIOD``).
-- ``tick_evt``: the arm thread broadcasts a "tick" so the arm and camera start
-  each shot near-simultaneously.
-- ``cam_done``: the camera thread acknowledges after capturing a frame; the arm
-  waits for this ack to avoid advancing early.
-- No Barrier / tick_id / last_seen / wall/mono timestamps.
+- Fixed-rate sampling with drift-free schedule (next_tick += PERIOD)
+- tick_evt: Arm broadcasts "tick" so Arm & Camera start this shot near-simultaneously
+- cam_done: Camera acks after frame captured; Arm waits this ack to avoid advancing
+- No Barrier / tick_id / last_seen / timestamps
 
 Hotkeys:
-  - b: Start recording into a new ``demo_*``
+  - b: Start recording into a new 'demo_*'
   - n: Save current trajectory
   - m: Reject (drop) current trajectory
   - q: Quit
-
-Attributes:
-  PERIOD (float): Sampling period in seconds.
-  CAM_WAIT_MS (int): Per-call timeout (ms) for ``wait_for_frames``; the camera
-    loop will keep retrying until a valid frame is obtained.
-  DATA_SAVED_PATH (str): Directory where the dataset pickle is saved.
 """
 
 import copy
@@ -39,8 +28,8 @@ from piper_dev.utils import connect_camera, current_state
 from piper_dev.utils import frame_to_bgr_image, bgrs_to_rgbs
 
 # ===== Settings =====
-PERIOD = 0.05          # Sampling period (seconds)
-CAM_WAIT_MS = 100     # Per-call wait_for_frames timeout (ms); loop-retry until a frame is captured
+PERIOD = 0.2          # seconds
+CAM_WAIT_MS = 100     # wait_for_frames 单次等待(ms)，循环重试直到取到帧
 DATA_SAVED_PATH = "datasets"
 os.makedirs(DATA_SAVED_PATH, exist_ok=True)
 
@@ -50,62 +39,42 @@ def state_loop_tick_broadcast(
     record_on: threading.Event,
     quit_on: threading.Event,
     # events
-    tick_evt: threading.Event,     # Arm -> (Arm & Cam): broadcast "tick" to start this shot
-    cam_done: threading.Event,     # Cam -> Arm: ack when the camera frame for this shot is ready
+    tick_evt: threading.Event,     # Arm -> (Arm & Cam): 同步“开拍”触发
+    cam_done: threading.Event,     # Cam -> Arm: 本拍帧完成确认
     # buffer
     buf_lock: threading.Lock,
-    state: list,                   # Append: robot state samples for each shot
+    state: list,                   # append(sample)
 ) -> None:
-    """Arm thread loop: fixed-rate driver with tick broadcast and camera ack.
-
-    The arm thread maintains a drift-free fixed-rate schedule. At each shot, it
-    broadcasts a ``tick`` event to trigger both the arm sampling and the camera
-    capture nearly simultaneously, appends the arm sample to the buffer, and
-    then waits for the camera acknowledgment before advancing to the next tick.
-
-    Args:
-      piper: Connected robot arm interface.
-      record_on: Event toggling recording on/off.
-      quit_on: Event signaling both threads to exit.
-      tick_evt: Event used to broadcast the start of a shot.
-      cam_done: Event set by the camera when its frame for the shot is ready.
-      buf_lock: Mutex protecting access to ``state``.
-      state: List buffer to append arm samples to (one per shot).
-
-    Returns:
-      None
-    """
+    """Arm thread: fixed-rate driver; broadcasts tick; waits for camera ack each shot."""
     next_tick = None
     while not quit_on.is_set():
         if not record_on.is_set():
-            next_tick = None
             time.sleep(0.01)
             continue
 
-        # Drift-free schedule: sleep until the next tick boundary.
+        # 漂移校正：到达拍点
         now = time.perf_counter()
         if next_tick is None:
-            # First shot starts on the next period boundary (adjust as needed).
+            # 第一拍立即触发（若想对齐到下个周期：next_tick = now + PERIOD）
             next_tick = now + PERIOD
         if now < next_tick:
             time.sleep(next_tick - now)
 
-        # 1) Broadcast "tick": arm & camera start this shot near-simultaneously.
+        # 1) 同步触发“开拍”：Arm & Cam 几乎同时开始各自采集
         tick_evt.set()
 
-        # 2) Sample the arm.
+        # 2) Arm 采样
         sample = current_state(piper)
-        print(f"time_1: {time.perf_counter():.2f}")
 
-        # 3) Append the arm sample.
+        # 3) 缓存 Arm 样本
         with buf_lock:
             state.append(sample)
 
-        # 4) Wait for the camera to finish this shot (prevents the arm advancing early).
+        # 4) 等待相机完成本拍（严格防止 Arm 超前）
         cam_done.wait()
         cam_done.clear()
 
-        # 5) Schedule the next shot.
+        # 5) 下一拍时刻
         next_tick += PERIOD
 
 
@@ -114,41 +83,23 @@ def rgb_loop_tick_broadcast(
     record_on: threading.Event,
     quit_on: threading.Event,
     # events
-    tick_evt: threading.Event,     # Arm -> (Arm & Cam): broadcast "tick"
-    cam_done: threading.Event,     # Cam -> Arm: ack after a frame is captured
+    tick_evt: threading.Event,     # Arm -> (Arm & Cam)
+    cam_done: threading.Event,     # Cam -> Arm
     # buffer
     buf_lock: threading.Lock,
-    rgb: list,                     # Append: BGR frames (numpy arrays) per shot
+    rgb: list,                     # append(color_frame)
 ) -> None:
-    """Camera thread loop: wait for tick, capture one frame, then ack.
-
-    The camera thread blocks on the broadcast ``tick`` event, consumes it,
-    captures exactly one color frame (retrying by ``wait_for_frames`` until a
-    valid frame is returned), appends the frame to the buffer, and then sets
-    ``cam_done`` to let the arm proceed to the next shot.
-
-    Args:
-      pipeline: Initialized camera/pipeline handle.
-      record_on: Event toggling recording on/off.
-      quit_on: Event signaling both threads to exit.
-      tick_evt: Event set by the arm to start a shot.
-      cam_done: Event set by the camera when the frame is ready.
-      buf_lock: Mutex protecting access to ``rgb``.
-      rgb: List buffer to append converted BGR frames to (one per shot).
-
-    Returns:
-      None
-    """
+    """Camera thread: waits for tick, captures one color frame, then acks cam_done."""
     while not quit_on.is_set():
         if not record_on.is_set():
             time.sleep(0.01)
             continue
 
-        # Wait for the "tick" and consume it to process this shot exactly once.
+        # 等待“开拍”触发；清掉以消费这一次 tick
         tick_evt.wait()
         tick_evt.clear()
 
-        # Capture a single frame; strictly wait until a valid color frame is obtained.
+        # 取一帧（严格：直到拿到有效 color_frame 才确认）
         color_frame = None
         while not quit_on.is_set() and record_on.is_set():
             frames = pipeline.wait_for_frames(CAM_WAIT_MS)
@@ -156,39 +107,23 @@ def rgb_loop_tick_broadcast(
                 continue
             cf = frames.get_color_frame()
             if cf is not None:
-                print(f"time_2: {time.perf_counter():.2f}")
                 color_frame = frame_to_bgr_image(cf)
                 break
 
         if color_frame is None:
-            # Device stopped or transient failure: do not ack; arm will keep waiting or the user will stop.
+            # 设备异常/被停止：不确认，让 Arm 继续等待或主线程中止
             continue
 
-        # Append the camera frame.
+        # 缓存 Camera 帧
         with buf_lock:
             rgb.append(color_frame)
 
-        # Ack completion so the arm can advance to the next shot.
+        # 确认完成，允许 Arm 进入下一拍
         cam_done.set()
 
 
 def main() -> None:
-    """Program entry point.
-
-    Connects to the robot arm and camera, starts the worker threads, runs the
-    keyboard-driven loop for recording/ending/rejecting trajectories, and saves
-    the dataset as a pickle at the end.
-
-    Hotkeys:
-      - b: Start a new recording session into ``demo_{idx}``.
-      - n: Save the current session's buffers into ``demos``.
-      - m: Reject (clear) the current buffers without saving.
-      - q: Quit the program.
-
-    Returns:
-      None
-    """
-    # Connect devices.
+    # 连接设备
     piper = C_PiperInterface_V2("can0")
     piper.ConnectPort()
     orbbec = connect_camera()
@@ -205,7 +140,7 @@ def main() -> None:
     record_on = threading.Event()
     quit_on = threading.Event()
 
-    # Events: shared tick broadcast + camera completion ack.
+    # 事件：公共 tick 触发 + 相机完成确认
     tick_evt = threading.Event()
     cam_done = threading.Event()
 
@@ -231,26 +166,25 @@ def main() -> None:
                     state.clear()
                     rgb.clear()
 
-                # Reset per-session events and start recording.
+                # 清事件，开始录制
                 tick_evt.clear()
                 cam_done.clear()
                 record_on.set()
                 print(colored(f"Recording: demo_{idx}", "green"))
 
             elif cmd == "n":
-                # Stop recording and copy buffers for saving.
+                # 停止录制
                 record_on.clear()
-                tick_evt.set()
-                cam_done.set()
 
+                # 拷贝缓冲
                 with buf_lock:
                     to_save_state = copy.deepcopy(state)
-                    # Convert BGR frames to RGB before saving (safer for most consumers).
+                    # to_save_rgb = copy.deepcopy(rgb)
                     to_save_rgb = bgrs_to_rgbs(copy.deepcopy(rgb))
                     state.clear()
                     rgb.clear()
 
-                # Safety trim (should already match, but keep the invariant).
+                # 安全裁剪（理论上长度应一致）
                 Ls, Lr = len(to_save_state), len(to_save_rgb)
                 if Ls != Lr:
                     L = min(Ls, Lr)
@@ -264,17 +198,15 @@ def main() -> None:
                 idx += 1
 
             elif cmd == "m":
-                # Stop recording and discard current buffers.
+                # 停止并丢弃
                 record_on.clear()
-                tick_evt.set()
-                cam_done.set()
                 with buf_lock:
                     state.clear()
                     rgb.clear()
                 print(colored("Rejected current trajectory.", "magenta"))
 
             elif cmd == "q":
-                # Quit: stop recording and wake any waiting threads.
+                # 退出：关录制并唤醒等待线程
                 record_on.clear()
                 quit_on.set()
                 tick_evt.set()

@@ -38,10 +38,12 @@ from pyorbbecsdk import *
 from piper_dev.utils import connect_camera, current_state
 from piper_dev.utils import frame_to_bgr_image, bgrs_to_rgbs
 
+from piper_dev.data_collection.config import TeleCFG
+
 # ===== Settings =====
-PERIOD = 0.05          # Sampling period (seconds)
-CAM_WAIT_MS = 100     # Per-call wait_for_frames timeout (ms); loop-retry until a frame is captured
-DATA_SAVED_PATH = "datasets"
+config = TeleCFG()
+PERIOD = config.period          # Sampling period (seconds)
+DATA_SAVED_PATH = config.saved_path
 os.makedirs(DATA_SAVED_PATH, exist_ok=True)
 
 
@@ -151,7 +153,7 @@ def rgb_loop_tick_broadcast(
         # Capture a single frame; strictly wait until a valid color frame is obtained.
         color_frame = None
         while not quit_on.is_set() and record_on.is_set():
-            frames = pipeline.wait_for_frames(CAM_WAIT_MS)
+            frames = pipeline.wait_for_frames(100)
             if frames is None:
                 continue
             cf = frames.get_color_frame()
@@ -193,6 +195,7 @@ def main() -> None:
     piper.ConnectPort()
     orbbec = connect_camera()
 
+    print(colored("Change Config in 'config.py'", "yellow"))
     print(colored("b=Start Record; n=Save Trajectory; m=Reject Trajectory; q=Quit System", "cyan"))
 
     demos = {}
