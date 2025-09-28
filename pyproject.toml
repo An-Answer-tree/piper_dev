@@ -1,15 +1,25 @@
 [project]
 name = "piper-dev"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Project to Deploy Agliex piper Arm with Orbbec335 Camera"
 readme = "README.md"
 authors = [
     { name = "Tong Liu", email = "szliutong@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "numpy>=2.3.3",
+    "python-can", 
+    "numpy<2.0",
     "termcolor>=3.1.0",
+    "pybind11==2.11.0", 
+    "pybind11-global==2.11.0", 
+    "opencv-python", 
+    "wheel", 
+    "av", 
+    "pygame", 
+    "pynput", 
+    "piper-sdk @ git+https://github.com/agilexrobotics/piper_sdk.git@master", 
+    "pyorbbecsdk @ file:///home/szliutong/Projects/piper_dev/whl/pyorbbecsdk-2.0.13-cp312-cp312-linux_x86_64.whl", 
 ]
 
 [project.scripts]
