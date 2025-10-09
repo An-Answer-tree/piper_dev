@@ -19,7 +19,7 @@ dependencies = [
     "pygame",
     "pynput",
     "piper-sdk @ git+https://github.com/agilexrobotics/piper_sdk.git@master",
-    "pyorbbecsdk @ file:///home/szliutong/Projects/piper_dev/whl/pyorbbecsdk-2.0.13-cp312-cp312-linux_x86_64.whl",
+    "pyorbbecsdk @ file:///home/szliutong/Project/piper_dev/whl/pyorbbecsdk-2.0.13-cp312-cp312-linux_x86_64.whl",
     "pillow>=11.3.0",
 ]
 

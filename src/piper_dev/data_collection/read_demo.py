@@ -5,7 +5,7 @@ import pickle
 import PIL
 from termcolor import colored
 
-file_path = "dataset/test.pkl"
+file_path = "dataset/hhhhhh.pkl"
 
 with open(file_path, 'rb') as f:
     demos = pickle.load(f)

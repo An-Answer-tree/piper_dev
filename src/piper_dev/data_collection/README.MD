@@ -39,9 +39,17 @@ pip install -e .
 # Edit the config.py file
 
 # 3. Start Teleoperation
+sudo bash ./scripts/can_activate.sh        # Activate CAN to connect to robotic arm
 python src/piper_dev/data_collection/teleoperation.py
 ```
 
+## 3.2 Issue
+If can't recognize the Gemini 335 camera, run this script to solve permission problem:
+
+```
+chmod +x scripts/orbbec_permissions.sh
+sudo bash scripts/orbbec_permissions.sh
+```
 
 ## 3.2 Hotkeys:
 - b: Start recording into a new demo_*
