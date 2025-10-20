@@ -21,9 +21,11 @@ dependencies = [
     "piper-sdk @ git+https://github.com/agilexrobotics/piper_sdk.git@master",
     "pyorbbecsdk @ file:///home/szliutong/Project/piper_dev/whl/pyorbbecsdk-2.0.13-cp310-cp310-linux_x86_64.whl",
     "pillow>=11.3.0",
+    "protobuf>=3.20.0,<3.21.0",
     "tfds-nightly>=4.9.9.dev202510120044",
-    "envlogger>=1.2",
     "tensorflow>=2.18.1",
+    "apache-beam>=2.68.0",
+    "mlcroissant>=1.0.22",
 ]
 
 [project.scripts]
