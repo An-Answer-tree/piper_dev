@@ -3,7 +3,7 @@ from dataclasses import dataclass
 @dataclass
 class TeleCFG:
     # Record data per "period"; Record frequency = 1 / period
-    period = 0.05              # 20Hz
+    period = 0.1              # 20Hz
     saved_path = "./dataset"   # Path to save data
     
     # Camera record setting

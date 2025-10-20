@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Tong Liu", email = "szliutong@gmail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "python-can",
     "numpy<2.0",
@@ -19,8 +19,11 @@ dependencies = [
     "pygame",
     "pynput",
     "piper-sdk @ git+https://github.com/agilexrobotics/piper_sdk.git@master",
-    "pyorbbecsdk @ file:///home/szliutong/Project/piper_dev/whl/pyorbbecsdk-2.0.13-cp312-cp312-linux_x86_64.whl",
+    "pyorbbecsdk @ file:///home/szliutong/Project/piper_dev/whl/pyorbbecsdk-2.0.13-cp310-cp310-linux_x86_64.whl",
     "pillow>=11.3.0",
+    "tfds-nightly>=4.9.9.dev202510120044",
+    "envlogger>=1.2",
+    "tensorflow>=2.18.1",
 ]
 
 [project.scripts]
