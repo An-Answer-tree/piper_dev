@@ -17,39 +17,25 @@ class Builder(tfds.core.GeneratorBasedBuilder):
     }
 
     def _info(self) -> tfds.core.DatasetInfo:
-        """Returns the dataset metadata."""
+        """Returns the dataset metadata matching the provided element_spec."""
         features = tfds.features.FeaturesDict({
-            "episode_metadata": tfds.features.FeaturesDict({
-                "file_path": tfds.features.Text(),
-                "recording_folderpath": tfds.features.Text(),
-            }),
             "steps": tfds.features.Dataset({
-                "action": tfds.features.Tensor(shape=(7,), dtype=tf.float64),
-                "action_dict": tfds.features.FeaturesDict({
-                    "cartesian_position": tfds.features.Tensor(shape=(6,), dtype=tf.float64),
-                    "cartesian_velocity": tfds.features.Tensor(shape=(6,), dtype=tf.float64),
-                    "gripper_position": tfds.features.Tensor(shape=(1,), dtype=tf.float64),
-                    "gripper_velocity": tfds.features.Tensor(shape=(1,), dtype=tf.float64),
-                    "joint_position": tfds.features.Tensor(shape=(7,), dtype=tf.float64),
-                    "joint_velocity": tfds.features.Tensor(shape=(7,), dtype=tf.float64),
+                "action": tfds.features.FeaturesDict({
+                    "gripper": tfds.features.Tensor(shape=(1,), dtype=tf.float32),
+                    "rotation_delta": tfds.features.Tensor(shape=(3,), dtype=tf.float32),
+                    "world_vector": tfds.features.Tensor(shape=(3,), dtype=tf.float32),
                 }),
-                "discount": tfds.features.Scalar(dtype=tf.float32),
-                "is_first": tf.bool,
-                "is_last": tf.bool,
-                "is_terminal": tf.bool,
-                "language_instruction": tfds.features.Text(),
-                "language_instruction_2": tfds.features.Text(),
-                "language_instruction_3": tfds.features.Text(),
+                "is_first": tfds.features.Tensor(shape=(), dtype=tf.bool),
+                "is_last": tfds.features.Tensor(shape=(), dtype=tf.bool),
+                "is_terminal": tfds.features.Tensor(shape=(), dtype=tf.bool),
                 "observation": tfds.features.FeaturesDict({
-                    "cartesian_position": tfds.features.Tensor(shape=(6,), dtype=tf.float64),
-                    "exterior_image_1_left": tfds.features.Image(shape=(None, None, 3), dtype=tf.uint8),
-                    "exterior_image_2_left": tfds.features.Image(shape=(None, None, 3), dtype=tf.uint8),
-                    "gripper_position": tfds.features.Tensor(shape=(1,), dtype=tf.float64),
-                    "joint_position": tfds.features.Tensor(shape=(7,), dtype=tf.float64),
-                    "wrist_image_left": tfds.features.Image(shape=(None, None, 3), dtype=tf.uint8),
+                    "image": tfds.features.Image(shape=(480, 640, 3), dtype=tf.uint8),
+                    "natural_language_instruction": tfds.features.Text(),
+                    "EEF_state": tfds.features.Tensor(shape=(6,), dtype=tf.float32),
+                    "gripper_state": tfds.features.Tensor(shape=(1,), dtype=tf.float32)
                 }),
-                "reward": tfds.features.Scalar(dtype=tf.float32),
-            }),
+                "reward": tfds.features.Tensor(shape=(), dtype=tf.float32),
+            })
         })
   
         return self.dataset_info_from_configs(
@@ -84,7 +70,7 @@ class Builder(tfds.core.GeneratorBasedBuilder):
             for id in range(0, demo_num):
                 demo_key = f"demo_{id}"
                 demo = demos[demo_key]
-                states = self._as_np(demo["state"], dtype=np.float64)   # (T, 7)
+                states = self._as_np(demo["state"], dtype=np.float32)   # (T, 7)
                 rgbs   = self._as_np(demo["rgb"], dtype=np.uint8)       # (T, H, W, 3)
                 
                 T = int(min(len(states), len(rgbs)))
@@ -94,13 +80,8 @@ class Builder(tfds.core.GeneratorBasedBuilder):
                 rgbs = rgbs[:T]
 
                 # Add Content
-                episode_metadata = {
-                    "file_path": task_pkl,
-                    "recording_folderpath": os.path.dirname(task_pkl),
-                }
                 example = {
-                    "episode_metadata": episode_metadata,
-                    "steps": self.steps_iter(T, states, rgbs, instruction),
+                    "steps": self.steps_iter(T-1, states, rgbs, instruction),
                 }
                 
                 yield key, example
@@ -111,43 +92,30 @@ class Builder(tfds.core.GeneratorBasedBuilder):
         return arr.astype(dtype) if (dtype is not None and arr.dtype != dtype) else arr
     
     def steps_iter(self, T, states, rgbs, instruction):
-        zeros1 = np.zeros((1,),  dtype=np.float64)
-        zeros6 = np.zeros((6,),  dtype=np.float64)
-        zeros7 = np.zeros((7,),  dtype=np.float64)
         
         for t in range(T):
-            pose = states[t]
             image = rgbs[t]
+            state = states[t]
             
             # Fill data
-            action = pose
-            action_dict = {
-                "cartesian_position": zeros6,
-                "cartesian_velocity": zeros6,
-                "gripper_position":   zeros1,
-                "gripper_velocity":   zeros1,
-                "joint_position":     pose,
-                "joint_velocity":     zeros7,
+            action_list = states[t + 1] - states[t]
+            action = {
+                "gripper": np.reshape(action_list[-1], (1,)).astype(np.float32),
+                "rotation_delta": action_list[3:6],
+                "world_vector": action_list[0:3]
             }
             observation = {
-                "cartesian_position": zeros6,
-                "exterior_image_1_left": image,
-                "exterior_image_2_left": image,
-                "gripper_position":   zeros1,
-                "joint_position":     zeros7,
-                "wrist_image_left":   image,
+                "image": image,
+                "natural_language_instruction": instruction,
+                "EEF_state": state[0:6],
+                "gripper_state": np.reshape(state[-1], (1,)).astype(np.float32),
             }
             
             yield {
                 "action": action,
-                "action_dict": action_dict,
-                "discount": np.float32(1.0),
                 "is_first": (t == 0),
                 "is_last":  (t == T - 1),
                 "is_terminal": (t == T - 1), 
-                "language_instruction":   instruction,
-                "language_instruction_2": "",
-                "language_instruction_3": "",
                 "observation": observation,
                 "reward": np.float32(0.0),       # if no reward, default 0
             }
