@@ -26,7 +26,7 @@ from typing import List
 import numpy as np
 from piper_sdk import *
 from pyorbbecsdk import *
-from piper_dev.utils import connect_camera, current_state
+from piper_dev.utils import connect_camera, current_state, current_joint
 from piper_dev.utils import frame_to_bgr_image, bgrs_to_rgbs
 
 from piper_dev.data_collection.config import TeleCFG
@@ -52,6 +52,7 @@ def state_loop_tick_broadcast(
     # buffer
     buf_lock: threading.Lock,
     state: list,                   # Append: robot state samples for each shot
+    joint: list,
 ) -> None:
     """Arm thread loop: fixed-rate driver with tick broadcast and camera ack.
 
@@ -92,11 +93,13 @@ def state_loop_tick_broadcast(
 
         # 2) Sample the arm.
         sample = current_state(piper)
-        print(f"time_1: {time.perf_counter():.2f}")
+        # print(f"time_1: {time.perf_counter():.2f}")
+        # joint_sample = current_joint(piper)
 
         # 3) Append the arm sample.
         with buf_lock:
             state.append(sample)
+            # joint.append(joint_sample)
 
         # 4) Wait for the camera to finish this shot (prevents the arm advancing early).
         cam_done.wait()
@@ -153,7 +156,7 @@ def rgb_loop_tick_broadcast(
                 continue
             cf = frames.get_color_frame()
             if cf is not None:
-                print(f"time_2: {time.perf_counter():.2f}")
+                # print(f"time_2: {time.perf_counter():.2f}")
                 color_frame = frame_to_bgr_image(cf)
                 break
 
@@ -197,6 +200,7 @@ def main() -> None:
     demos = {}
     idx = 0
 
+    # joint: List = []
     state: List = []
     rgb: List = []
     buf_lock = threading.Lock()
@@ -210,7 +214,7 @@ def main() -> None:
 
     th_state = threading.Thread(
         target=state_loop_tick_broadcast,
-        args=(piper, record_on, quit_on, tick_evt, cam_done, buf_lock, state),
+        args=(piper, record_on, quit_on, tick_evt, cam_done, buf_lock, state, joint),
         daemon=True,
     )
     th_rgb = threading.Thread(
@@ -227,6 +231,7 @@ def main() -> None:
             if cmd == "b":
                 demos[f"demo_{idx}"] = {}
                 with buf_lock:
+                    # joint.clear()
                     state.clear()
                     rgb.clear()
 
@@ -244,8 +249,11 @@ def main() -> None:
 
                 with buf_lock:
                     to_save_state = copy.deepcopy(state)
+                    # to_save_joint = copy.deepcopy(joint)
                     # Convert BGR frames to RGB before saving (safer for most consumers).
                     to_save_rgb = bgrs_to_rgbs(copy.deepcopy(rgb))
+                    
+                    # joint.clear()
                     state.clear()
                     rgb.clear()
 
@@ -256,7 +264,8 @@ def main() -> None:
                     print(colored(f"Trim tails to align: state={Ls} rgb={Lr} -> {L}", "magenta"))
                     to_save_state = to_save_state[:L]
                     to_save_rgb = to_save_rgb[:L]
-
+                
+                # demos[f"demo_{idx}"]["joint"] = to_save_joint
                 demos[f"demo_{idx}"]["state"] = to_save_state
                 demos[f"demo_{idx}"]["rgb"] = to_save_rgb
                 print(colored(f"Saved: demo_{idx} ({len(to_save_state)} states, {len(to_save_rgb)} frames)", "yellow"))
@@ -268,6 +277,7 @@ def main() -> None:
                 tick_evt.set()
                 cam_done.set()
                 with buf_lock:
+                    # joint.clear()
                     state.clear()
                     rgb.clear()
                 print(colored("Rejected current trajectory.", "magenta"))

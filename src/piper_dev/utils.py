@@ -174,6 +174,10 @@ def current_state(piper: C_PiperInterface_V2) -> np.ndarray:
     return arm_state
 
 
+def current_joint(piper: C_PiperInterface_V2) -> np.ndarray:
+    return np.array([])
+
+
 def connect_camera(width: int = 640, height: int = 480, fps: int = 30):
     config = Config()
     pipeline = Pipeline()
